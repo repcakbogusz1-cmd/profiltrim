@@ -1,0 +1,628 @@
+<!DOCTYPE html>
+<html lang="pl">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Zaawansowany Optymalizator Cięcia Profili</title>
+    <style>
+        :root {
+            --primary: #2c3e50;
+            --secondary: #34495e;
+            --accent: #3498db;
+            --kerf-color: #e74c3c;
+            --bar-bg: #ecf0f1;
+            --settings-bg: #e8f4f8;
+        }
+
+        body {
+            font-family: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif;
+            margin: 0;
+            padding: 20px;
+            background-color: #f9f9f9;
+            color: var(--primary);
+        }
+
+        .container {
+            max-width: 1200px;
+            margin: auto;
+            background: white;
+            padding: 20px;
+            border-radius: 8px;
+            box-shadow: 0 4px 6px rgba(0,0,0,0.1);
+        }
+
+        h1, h2, h3 {
+            color: var(--primary);
+        }
+
+        /* Sekcje formularza */
+        .settings-grid {
+            display: grid;
+            grid-template-columns: repeat(auto-fit, minmax(200px, 1fr));
+            gap: 15px;
+            margin-bottom: 20px;
+            background: var(--settings-bg);
+            padding: 15px;
+            border-radius: 6px;
+            border-left: 4px solid var(--accent);
+        }
+
+        .form-grid {
+            display: grid;
+            grid-template-columns: repeat(auto-fit, minmax(180px, 1fr));
+            gap: 15px;
+            margin-bottom: 20px;
+            background: var(--bar-bg);
+            padding: 15px;
+            border-radius: 6px;
+        }
+
+        .input-group {
+            display: flex;
+            flex-direction: column;
+        }
+
+        label {
+            font-weight: bold;
+            margin-bottom: 5px;
+            font-size: 14px;
+        }
+
+        input, select {
+            padding: 8px;
+            border: 1px solid #bdc3c7;
+            border-radius: 4px;
+            font-size: 14px;
+        }
+
+        button {
+            background-color: var(--accent);
+            color: white;
+            border: none;
+            padding: 10px 20px;
+            border-radius: 4px;
+            cursor: pointer;
+            font-weight: bold;
+            transition: background 0.2s;
+        }
+
+            button:hover {
+                background-color: #2980b9;
+            }
+
+        .btn-danger {
+            background-color: #e74c3c;
+        }
+
+            .btn-danger:hover {
+                background-color: #c0392b;
+            }
+
+        .btn-success {
+            background-color: #27ae60;
+        }
+
+            .btn-success:hover {
+                background-color: #2ecc71;
+            }
+
+        .btn-info {
+            background-color: #8e44ad;
+        }
+
+            .btn-info:hover {
+                background-color: #9b59b6;
+            }
+
+        .controls {
+            display: flex;
+            flex-wrap: wrap;
+            gap: 10px;
+            margin-bottom: 20px;
+        }
+
+        /* Tabela */
+        table {
+            width: 100%;
+            border-collapse: collapse;
+            margin-bottom: 30px;
+        }
+
+        th, td {
+            border: 1px solid #bdc3c7;
+            padding: 10px;
+            text-align: left;
+        }
+
+        th {
+            background-color: var(--bar-bg);
+        }
+
+        /* Wyniki i Wizualizacja */
+        .result-group {
+            margin-bottom: 40px;
+        }
+
+            .result-group h3 {
+                border-bottom: 2px solid var(--primary);
+                padding-bottom: 5px;
+            }
+
+        .bar-container {
+            width: 100%;
+            height: 40px;
+            background-color: #ddd;
+            margin-bottom: 10px;
+            position: relative;
+            border: 1px solid #95a5a6;
+            display: flex;
+            box-sizing: border-box;
+        }
+
+        .cut-piece {
+            height: 100%;
+            background-color: #2ecc71;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            color: white;
+            font-size: 12px;
+            font-weight: bold;
+            box-sizing: border-box;
+            overflow: hidden;
+            white-space: nowrap;
+            border-right: 1px solid rgba(255,255,255,0.3);
+        }
+
+        .kerf {
+            height: 100%;
+            background-color: var(--kerf-color);
+            box-sizing: border-box;
+        }
+
+        .waste {
+            height: 100%;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            font-size: 12px;
+            box-sizing: border-box;
+        }
+
+            .waste.scrap {
+                background-color: #bdc3c7;
+                color: #7f8c8d;
+            }
+
+            .waste.leftover {
+                background-color: #f1c40f;
+                color: #333;
+                font-weight: bold;
+            }
+
+        .bar-stats {
+            font-size: 13px;
+            margin-bottom: 4px;
+            font-weight: bold;
+        }
+
+        .total-waste-summary {
+            font-weight: bold;
+            margin-top: 15px;
+            font-size: 16px;
+            text-align: right;
+            padding-top: 10px;
+            border-top: 1px dashed #bdc3c7;
+        }
+
+        /* Ustawienia wydruku do PDF */
+        @media print {
+            body {
+                background: white;
+                padding: 0;
+                margin: 0;
+            }
+
+            .container {
+                box-shadow: none;
+                max-width: 100%;
+                width: 100%;
+                padding: 0;
+            }
+
+            .no-print {
+                display: none !important;
+            }
+
+            .bar-container, .cut-piece, .kerf, .waste {
+                print-color-adjust: exact;
+                -webkit-print-color-adjust: exact;
+            }
+
+            .cut-piece {
+                border-right: 1px solid #fff;
+            }
+
+            .result-group {
+                page-break-inside: avoid;
+            }
+        }
+    </style>
+</head>
+<body>
+
+    <div class="container">
+        <h1 class="no-print">Optymalizator Cięcia (Algorytm Zaawansowany)</h1>
+
+        <div class="settings-grid no-print">
+            <div class="input-group">
+                <label>Długość sztangi bazowej (mm)</label>
+                <input type="text" id="globalStockLength" value="6000" inputmode="decimal">
+            </div>
+            <div class="input-group">
+                <label>Grubość tarczy tnącej [Rzaz] (mm)</label>
+                <input type="text" id="globalKerf" value="3" inputmode="decimal">
+            </div>
+        </div>
+
+        <div class="form-grid no-print">
+            <div class="input-group">
+                <label>Rodzaj profilu</label>
+                <input type="text" id="typeInput" list="typeList" placeholder="Wybierz lub wpisz">
+                <datalist id="typeList">
+                    <option value="Profil lameli"></option>
+                    <option value="Profil poziomy"></option>
+                    <option value="Profil pionowy"></option>
+                    <option value="Profil działowy"></option>
+                    <option value="Trzpień 12x12"></option>
+                </datalist>
+            </div>
+            <div class="input-group">
+                <label>Oznaczenie (np. P1)</label>
+                <input type="text" id="descInput" placeholder="Opcjonalne">
+            </div>
+            <div class="input-group">
+                <label>Długość (mm)</label>
+                <input type="text" id="lengthInput" inputmode="decimal" placeholder="np. 1010.5">
+            </div>
+            <div class="input-group">
+                <label>Liczba sztuk</label>
+                <input type="text" id="qtyInput" inputmode="numeric" value="1">
+            </div>
+            <div class="input-group" style="justify-content: flex-end;">
+                <button onclick="addItem()" id="addBtn">Dodaj element</button>
+            </div>
+        </div>
+
+        <div class="no-print">
+            <table id="dataTable">
+                <thead>
+                    <tr>
+                        <th>Rodzaj profilu</th>
+                        <th>Oznaczenie</th>
+                        <th>Długość (mm)</th>
+                        <th>Sztuk</th>
+                        <th>Akcja</th>
+                    </tr>
+                </thead>
+                <tbody>
+                    <!-- Elementy dodawane dynamicznie -->
+                </tbody>
+            </table>
+
+            <div class="controls">
+                <button class="btn-success" onclick="calculateCuts()">Generuj Rozkrój (Silnik Plecakowy)</button>
+                <button class="btn-info" onclick="exportCSV()">Pobierz CSV</button>
+                <button class="btn-info" onclick="document.getElementById('csvFileInput').click()">Wgraj CSV</button>
+                <input type="file" id="csvFileInput" accept=".csv" style="display: none;" onchange="importCSV(event)">
+                <button onclick="window.print()">Eksportuj do PDF</button>
+                <button class="btn-danger" onclick="clearData()">Wyczyść dane</button>
+            </div>
+        </div>
+
+        <div id="resultsArea">
+            <!-- Wyniki będą generowane tutaj -->
+        </div>
+    </div>
+
+    <script>
+            let items = [];
+
+            // Nasłuchiwanie klawisza ENTER do szybkiego wprowadzania
+            window.onload = () => {
+                document.getElementById('lengthInput').addEventListener('keypress', function(e) {
+                    if (e.key === 'Enter') addItem();
+                });
+                document.getElementById('qtyInput').addEventListener('keypress', function(e) {
+                    if (e.key === 'Enter') addItem();
+                });
+            };
+
+            function parseToNumber(value) {
+                // Zamienia polski przecinek na kropkę, żeby JS to zrozumiał
+                if (!value) return NaN;
+                return parseFloat(value.toString().replace(',', '.'));
+            }
+
+            function getSettings() {
+                let stockLength = parseToNumber(document.getElementById('globalStockLength').value);
+                let kerf = parseToNumber(document.getElementById('globalKerf').value);
+
+                if (isNaN(stockLength) || stockLength <= 0) stockLength = 6000;
+                if (isNaN(kerf) || kerf < 0) kerf = 0;
+
+                return { stockLength, kerf };
+            }
+
+            function addItem() {
+                const { stockLength } = getSettings();
+                const type = document.getElementById('typeInput').value.trim();
+                const desc = document.getElementById('descInput').value.trim();
+
+                const length = parseToNumber(document.getElementById('lengthInput').value);
+                const qty = parseInt(document.getElementById('qtyInput').value);
+
+                // Dokładna walidacja wyświetlająca konkretny błąd:
+                if (!type) {
+                    alert("Błąd: Wybierz lub wpisz 'Rodzaj profilu'!");
+                    return;
+                }
+                if (isNaN(length) || length <= 0) {
+                    alert("Błąd: Długość musi być poprawną liczbą większą od zera (np. 1500 lub 1500,5)!");
+                    return;
+                }
+                if (isNaN(qty) || qty <= 0) {
+                    alert("Błąd: Liczba sztuk musi być wpisana jako liczba całkowita (np. 1, 5, 12)!");
+                    return;
+                }
+                if (length > stockLength) {
+                    alert(`Błąd: Długość elementu (${length} mm) jest większa niż cała sztanga (${stockLength} mm)!`);
+                    return;
+                }
+
+                // Generowanie 100% bezpiecznego ID (tekst zamiast samej liczby ułamkowej)
+                const safeId = 'item_' + Date.now() + '_' + Math.floor(Math.random() * 10000);
+
+                items.push({ id: safeId, type, desc, length, qty });
+                renderTable();
+
+                document.getElementById('lengthInput').value = '';
+                document.getElementById('qtyInput').value = '1';
+                document.getElementById('descInput').value = '';
+                document.getElementById('typeInput').focus();
+            }
+
+            function removeItem(id) {
+                items = items.filter(i => i.id !== id);
+                renderTable();
+            }
+
+            function clearData() {
+                if(confirm("Czy na pewno chcesz usunąć wszystkie dane z tabeli?")) {
+                    items = [];
+                    renderTable();
+                    document.getElementById('resultsArea').innerHTML = '';
+                }
+            }
+
+            function renderTable() {
+                const tbody = document.querySelector('#dataTable tbody');
+                tbody.innerHTML = '';
+                items.forEach(item => {
+                    const tr = document.createElement('tr');
+                    tr.innerHTML = `
+                        <td>${item.type}</td>
+                        <td>${item.desc}</td>
+                        <td>${item.length}</td>
+                        <td>${item.qty}</td>
+                        <td><button class="btn-danger" onclick="removeItem('${item.id}')" style="padding: 5px 10px;">Usuń</button></td>
+                    `;
+                    tbody.appendChild(tr);
+                });
+            }
+
+            // ========== OBSŁUGA CSV ==========
+            function exportCSV() {
+                if (items.length === 0) { alert("Brak danych."); return; }
+                let csvContent = "Rodzaj;Oznaczenie;Dlugosc;Ilosc\n";
+                items.forEach(item => {
+                    const cleanType = `"${item.type.replace(/"/g, '""')}"`;
+                    const cleanDesc = `"${item.desc.replace(/"/g, '""')}"`;
+                    csvContent += [cleanType, cleanDesc, item.length, item.qty].join(";") + "\n";
+                });
+                const blob = new Blob(["\uFEFF" + csvContent], { type: 'text/csv;charset=utf-8;' });
+                const link = document.createElement("a");
+                link.href = URL.createObjectURL(blob);
+                link.download = "profile.csv";
+                document.body.appendChild(link);
+                link.click();
+                document.body.removeChild(link);
+            }
+
+            function importCSV(event) {
+                const file = event.target.files[0];
+                if (!file) return;
+                const reader = new FileReader();
+                reader.onload = function(e) {
+                    const rows = e.target.result.split(/\r?\n/).filter(r => r.trim() !== "");
+                    if (rows.length === 0) return;
+                    const delimiter = rows[0].includes(';') ? ';' : ',';
+                    const hasHeader = isNaN(parseFloat(rows[0].split(delimiter)[2]?.replace(/["']/g, '')));
+                    let imported = 0;
+
+                    for (let i = hasHeader ? 1 : 0; i < rows.length; i++) {
+                        let cols = rows[i].split(delimiter).map(c => c.trim().replace(/^"|"$/g, '').replace(/""/g, '"'));
+                        if (cols.length >= 4) {
+                            const type = cols[0], desc = cols[1] || "";
+                            const len = parseToNumber(cols[2]);
+                            const qty = parseInt(cols[3]);
+
+                            if (type && !isNaN(len) && len > 0 && !isNaN(qty) && qty > 0) {
+                                const safeId = 'import_' + Date.now() + '_' + i + '_' + Math.floor(Math.random()*1000);
+                                items.push({ id: safeId, type, desc, length: len, qty });
+                                imported++;
+                            }
+                        }
+                    }
+                    if (imported > 0) { renderTable(); alert(`Wczytano ${imported} profili.`); }
+                    event.target.value = '';
+                };
+                reader.readAsText(file, "UTF-8");
+            }
+
+            // ========== ZAAWANSOWANY SILNIK OPTYMALIZACJI (Branch & Bound) ==========
+            function calculateCuts() {
+                if (items.length === 0) { alert("Dodaj elementy do tabeli!"); return; }
+
+                const { stockLength, kerf } = getSettings();
+                const groups = {};
+                let tooLong = false;
+
+                items.forEach(item => {
+                    if (item.length > stockLength) {
+                        alert(`Błąd: Długość elementu ${item.length} przekracza sztangę!`);
+                        tooLong = true;
+                    }
+                    if (!groups[item.type]) groups[item.type] = [];
+                    for (let i = 0; i < item.qty; i++) {
+                        groups[item.type].push({ length: item.length, desc: item.desc });
+                    }
+                });
+
+                if (tooLong) return;
+
+                const resultsArea = document.getElementById('resultsArea');
+                resultsArea.innerHTML = `<h2 style="text-align:center; margin-top:0;">Raport Cięcia (Sztangi ${stockLength} mm, tarcza ${kerf} mm)</h2>`;
+
+                const MULTIPLIER = 100; // Do bezpiecznej arytmetyki na ułamkach (np. 10.5 mm)
+                const capacity = Math.round((stockLength + kerf) * MULTIPLIER); // Maksymalna waga "plecaka"
+
+                for (const [type, pieces] of Object.entries(groups)) {
+                    let availablePieces = pieces.map((p, idx) => ({
+                        id: idx,
+                        length: p.length,
+                        desc: p.desc,
+                        weight: Math.round((p.length + kerf) * MULTIPLIER) // dodajemy wirtualnie 1 rzaz do każdego detalu
+                    }));
+
+                    const bars = [];
+
+                    while (availablePieces.length > 0) {
+                        availablePieces.sort((a, b) => b.weight - a.weight);
+
+                        // Prekalkulacja wag pozostałych do odcinania gałęzi (Branch & Bound pruning)
+                        for (let i = 0; i < availablePieces.length; i++) {
+                            let rem = 0;
+                            for (let j = i; j < availablePieces.length; j++) rem += availablePieces[j].weight;
+                            availablePieces[i].remainingWeight = rem;
+                        }
+
+                        let bestSum = -1;
+                        let bestSubsetIndices = [];
+                        let currentSubset = [];
+                        let iterations = 0;
+                        const MAX_ITERATIONS = 200000;
+
+                        function search(index, currentSum) {
+                            iterations++;
+                            if (iterations > MAX_ITERATIONS) return false;
+
+                            if (currentSum > bestSum) {
+                                bestSum = currentSum;
+                                bestSubsetIndices = currentSubset.slice();
+                            }
+
+                            if (bestSum === capacity) return true; // Znaleziono idealne dopasowanie co do ułamka!
+                            if (index >= availablePieces.length) return false;
+
+                            if (currentSum + availablePieces[index].remainingWeight <= bestSum) return false;
+
+                            for (let i = index; i < availablePieces.length; i++) {
+                                if (i > index && availablePieces[i].weight === availablePieces[i-1].weight) continue;
+
+                                if (currentSum + availablePieces[i].weight <= capacity) {
+                                    currentSubset.push(i);
+                                    if (search(i + 1, currentSum + availablePieces[i].weight)) return true;
+                                    currentSubset.pop();
+                                }
+                            }
+                            return false;
+                        }
+
+                        search(0, 0);
+
+                        if (bestSubsetIndices.length === 0) bestSubsetIndices = [0];
+
+                        const chosenPieces = bestSubsetIndices.map(i => availablePieces[i]);
+
+                        bestSubsetIndices.sort((a, b) => b - a);
+                        for (const idx of bestSubsetIndices) {
+                            availablePieces.splice(idx, 1);
+                        }
+
+                        // Kalkulacja fizycznego zużycia sztangi
+                        let usedLength = 0;
+                        chosenPieces.forEach(p => usedLength += p.length);
+                        if (chosenPieces.length > 0) {
+                            usedLength += (chosenPieces.length - 1) * kerf;
+                        }
+
+                        bars.push({ pieces: chosenPieces, used: usedLength });
+                    }
+
+                    renderGroupResults(type, bars, resultsArea, stockLength, kerf);
+                }
+            }
+
+            function renderGroupResults(type, bars, container, stockLength, kerf) {
+                let totalWaste = 0;
+                let html = `<div class="result-group">
+                    <h3>${type} - Wymagana liczba sztang: ${bars.length}</h3>`;
+
+                bars.forEach((bar, index) => {
+                    const isLastBar = index === bars.length - 1;
+                    const waste = Math.max(0, Math.round((stockLength - bar.used) * 100) / 100);
+
+                    if (!isLastBar) totalWaste += waste;
+
+                    const wasteLabel = isLastBar ? `KOŃCÓWKA UŻYTECZNA: ${waste} mm` : `ODPAD WYCIĘTY: ${waste} mm`;
+
+                    html += `<div class="bar-stats">SZTANGA ${index + 1}: Wykorzystano ${Math.round(bar.used * 100)/100} mm | ${wasteLabel}</div>`;
+                    html += `<div class="bar-container">`;
+
+                    bar.pieces.forEach((piece, pIdx) => {
+                        if (pIdx > 0 && kerf > 0) {
+                            const kerfPercent = (kerf / stockLength) * 100;
+                            html += `<div class="kerf" style="width: ${kerfPercent}%;" title="Cięcie: ${kerf}mm"></div>`;
+                        }
+
+                        const piecePercent = (piece.length / stockLength) * 100;
+                        const label = piece.desc ? `${piece.length} (${piece.desc})` : `${piece.length}`;
+
+                        const hue = (piece.length * 137.5) % 360;
+                        const color = `hsl(${hue}, 60%, 45%)`;
+
+                        html += `<div class="cut-piece" style="width: ${piecePercent}%; background-color: ${color};" title="${piece.length} mm">${label}</div>`;
+                    });
+
+                    if (waste > 0) {
+                        const wastePercent = (waste / stockLength) * 100;
+                        const wasteClass = isLastBar ? "waste leftover" : "waste scrap";
+                        const wText = isLastBar ? `Magazyn: ${waste}` : `Odp. ${waste}`;
+                        html += `<div class="${wasteClass}" style="width: ${wastePercent}%;" title="${wasteLabel}">${wText}</div>`;
+                    }
+
+                    html += `</div>`;
+                });
+
+                html += `<div class="total-waste-summary">
+                            ŁĄCZNY ODPAD (bez ostatniej sztangi): <span style="color: var(--kerf-color);">${Math.round(totalWaste * 100)/100} mm</span>
+                         </div>`;
+                html += `</div>`;
+
+                container.innerHTML += html;
+            }
+    </script>
+
+</body>
+</html>
